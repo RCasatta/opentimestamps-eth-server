@@ -78,7 +78,7 @@ def make_timestamp_from_block(digest, block, blockheight, *, max_tx_size=1000):
     my_root = state.root_hash
     block_root = bytes.fromhex(block['transactionsRoot'][2:])
     assert my_root == block_root
-    digest = digest.decode('utf-8')
+
     try:
         j, prepend_tx, append_tx = found_tx(digest, block, max_tx_size)
     except ValueError:

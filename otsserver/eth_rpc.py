@@ -121,13 +121,13 @@ class RPCRequestHandler(http.server.BaseHTTPRequestHandler):
 
             self.end_headers()
 
-            proxy = Web3(KeepAliveRPCProvider(host="localhost", port=8545))
+            web3 = Web3(KeepAliveRPCProvider(host="localhost", port=8545))
 
             # FIXME: Unfortunately getbalance() doesn't return the right thing;
             # need to investigate further, but this seems to work.
-            account = proxy.eth.accounts[0]
-            str_wallet_balance = str(proxy.eth.getBalance(account)/1000000000000000000)
-            block_number = proxy.eth.blockNumber
+            account = web3.eth.accounts[0]
+            str_wallet_balance = str(web3.eth.getBalance(account)/1000000000000000000)
+            block_number = web3.eth.blockNumber
 
 
             welcome_page = """\
