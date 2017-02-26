@@ -11,13 +11,8 @@
 
 import binascii
 import http.server
-import os
 import socketserver
-import threading
-import time
-
-import bitcoin.core
-
+from web3 import Web3, KeepAliveRPCProvider
 from opentimestamps.core.serialize import StreamSerializationContext
 
 
@@ -126,11 +121,14 @@ class RPCRequestHandler(http.server.BaseHTTPRequestHandler):
 
             self.end_headers()
 
-            proxy = bitcoin.rpc.Proxy()
+            proxy = Web3(KeepAliveRPCProvider(host="localhost", port=8545))
 
             # FIXME: Unfortunately getbalance() doesn't return the right thing;
             # need to investigate further, but this seems to work.
-            str_wallet_balance = str(proxy._call("getbalance"))
+            account = proxy.eth.accounts[0]
+            str_wallet_balance = str(proxy.eth.getBalance(account)/1000000000000000000)
+            block_number = proxy.eth.blockNumber
+
 
             welcome_page = """\
 <html>
@@ -141,11 +139,9 @@ class RPCRequestHandler(http.server.BaseHTTPRequestHandler):
 <p>This is an <a href="http://www.opentimestamps.org">OpenTimestamps</a> Calendar.</p>
 
 <p>
-Pending commitments: %d</br>
-Transactions waiting for confirmation: %d</br>
-Best-block: %s, height %d</br>
+Best-block height %d</br>
 </br>
-Wallet balance: %s BTC</br>
+Wallet balance: %s ETH</br>
 </p>
 
 <p>
@@ -155,11 +151,10 @@ This address changes after every donation.
 
 </body>
 </html>
-""" % (len(self.calendar.stamper.pending_commitments),
-       len(self.calendar.stamper.txs_waiting_for_confirmation),
-       bitcoin.core.b2lx(proxy.getbestblockhash()), proxy.getblockcount(),
+""" % (
+       block_number,
        str_wallet_balance,
-       str(proxy.getaccountaddress('')))
+       account)
 
             self.wfile.write(welcome_page.encode())
 

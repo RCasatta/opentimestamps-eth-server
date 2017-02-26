@@ -11,7 +11,7 @@
 
 import binascii
 import hashlib
-
+import sha3
 import opentimestamps.core.serialize
 
 class MsgValueError(ValueError):
@@ -304,7 +304,8 @@ class CryptOp(UnaryOp):
 
         return hasher.digest()
 
-# Cryptographic operation tag numbers taken from RFC4880
+# Cryptographic operation tag numbers taken from RFC4880, although it's not
+# guaranteed that they'll continue to match that RFC in the future.
 
 @CryptOp._register_op
 class OpSHA1(CryptOp):
@@ -333,3 +334,21 @@ class OpSHA256(CryptOp):
     TAG_NAME = 'sha256'
     HASHLIB_NAME = "sha256"
     DIGEST_LENGTH = 32
+
+@CryptOp._register_op
+class OpKECCAK256(UnaryOp):
+    __slots__ = []
+    SUBCLS_BY_TAG = {}
+    TAG = b'\x18'  # TODO define
+    TAG_NAME = 'keccak256'
+    DIGEST_LENGTH = 32
+
+    def _do_op_call(self, msg):
+        r = sha3.keccak_256(bytes(msg)).digest()
+        assert len(r) == self.DIGEST_LENGTH
+        return r
+
+    def hash_fd(self, fd):
+        chunk = fd.read(2 ** 20)  # 1MB chunks
+        return sha3.keccak_256(chunk).digest()   # FIXME
+

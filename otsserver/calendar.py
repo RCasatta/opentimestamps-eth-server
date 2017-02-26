@@ -25,8 +25,6 @@ from opentimestamps.core.serialize import BytesDeserializationContext, BytesSeri
 from opentimestamps.core.timestamp import Timestamp, make_merkle_tree
 from opentimestamps.timestamp import nonce_timestamp
 
-from bitcoin.core import b2x, b2lx
-
 # If you can make 64-bit hash collisions we'll let you add your junk to our
 # calendar.
 HMAC_SIZE = 8
@@ -253,7 +251,7 @@ class Aggregator:
 
             digests_commitment = make_merkle_tree(digests)
 
-            logging.info("Aggregated %d digests under commitment %s" % (len(digests), b2x(digests_commitment.msg)))
+            logging.info("Aggregated %d digests under commitment %s" % (len(digests), bytes.hex(digests_commitment.msg)))
 
             self.calendar.submit(digests_commitment)
 
