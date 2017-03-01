@@ -50,7 +50,7 @@ class EthStamper:
             tx_hash = self.web3.eth.sendTransaction(eth_tx)
             logging.info("tx_hash " + str(tx_hash))
             self.last_timestamp_tx = time.time()
-            self.pending_commitments = []
+            self.pending_commitments = set()
             self.unconfirmed_txs.append(TimestampTx(tx_hash, tip_timestamp, commitment_timestamps))
 
     def new_block_callback(self, block_hash):
