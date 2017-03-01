@@ -11,9 +11,7 @@
 
 import unittest
 
-from opentimestamps.core.serialize import StreamSerializationContext
-from opentimestamps.core.timestamp import DetachedTimestampFile
-from opentimestamps.ethereum import *
+from otsserver.ethereum import *
 
 
 class TestMakeTimestampFromBlock(unittest.TestCase):

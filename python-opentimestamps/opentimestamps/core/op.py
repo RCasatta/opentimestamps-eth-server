@@ -335,11 +335,11 @@ class OpSHA256(CryptOp):
     HASHLIB_NAME = "sha256"
     DIGEST_LENGTH = 32
 
+
 @CryptOp._register_op
 class OpKECCAK256(UnaryOp):
     __slots__ = []
-    SUBCLS_BY_TAG = {}
-    TAG = b'\x18'  # TODO define
+    TAG = b'\x67'
     TAG_NAME = 'keccak256'
     DIGEST_LENGTH = 32
 
@@ -347,8 +347,3 @@ class OpKECCAK256(UnaryOp):
         r = sha3.keccak_256(bytes(msg)).digest()
         assert len(r) == self.DIGEST_LENGTH
         return r
-
-    def hash_fd(self, fd):
-        chunk = fd.read(2 ** 20)  # 1MB chunks
-        return sha3.keccak_256(chunk).digest()   # FIXME
-

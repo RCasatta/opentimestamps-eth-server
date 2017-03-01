@@ -68,6 +68,17 @@ elif args.verbosity == -1:
 elif args.verbosity < -1:
     logging.root.setLevel(logging.ERROR)
 
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(message)s - %(levelname)s')
+ch.setFormatter(formatter)
+
+class Blacklist(logging.Filter):
+    def __init__(self, *blacklist):
+        self.blacklist = [logging.Filter(name) for name in blacklist]
+
+    def filter(self, record):
+        return not any(f.filter(record) for f in self.blacklist)
+
+ch.addFilter(Blacklist('requests.packages.urllib3.connectionpool'))
 
 exit_event = threading.Event()
 
@@ -87,4 +98,6 @@ except KeyboardInterrupt:
     exit_event.set()
     sys.exit(0)
 
+
 # vim:syntax=python filetype=python
+

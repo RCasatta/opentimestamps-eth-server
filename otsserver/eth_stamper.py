@@ -11,33 +11,27 @@
 
 import collections
 import logging
-import os
-import queue
-import struct
 import threading
 import time
 
 from web3 import KeepAliveRPCProvider
 from web3 import Web3
 
-from opentimestamps.ethereum import make_timestamp_from_block
-from opentimestamps.core.notary import PendingAttestation
-from opentimestamps.core.serialize import StreamSerializationContext, StreamDeserializationContext
-from opentimestamps.core.op import OpPrepend, OpAppend, OpSHA256
+from opentimestamps.core.op import OpSHA256
 from opentimestamps.core.timestamp import Timestamp, make_merkle_tree
-from opentimestamps.timestamp import nonce_timestamp
-
 from otsserver.calendar import Journal
-import time
+from otsserver.ethereum import make_timestamp_from_block
 
 TimestampTx = collections.namedtuple('TimestampTx', ['tx', 'tip_timestamp', 'commitment_timestamps'])
 WAIT_CONFIRMATIONS = 6
+WAIT_EVERY = 60 * 60  # Max 1tx per hour
 
 class EthStamper:
     """Timestamping bot"""
 
     def __do_ethereum(self):
-        if self.pending_commitments:
+        if self.pending_commitments and time.time() > self.last_timestamp_tx + WAIT_EVERY:
+            logging.info("we have commitments and enough time has passed")
             # logging.info(self.pending_commitments)
             # Update the most recent timestamp transaction with new commitments
             commitment_timestamps = [Timestamp(commitment) for commitment in self.pending_commitments]
@@ -55,6 +49,7 @@ class EthStamper:
             logging.info(eth_tx)
             tx_hash = self.web3.eth.sendTransaction(eth_tx)
             logging.info("tx_hash " + str(tx_hash))
+            self.last_timestamp_tx = time.time()
             self.pending_commitments = []
             self.unconfirmed_txs.append(TimestampTx(tx_hash, tip_timestamp, commitment_timestamps))
 
@@ -62,35 +57,34 @@ class EthStamper:
 
         block = self.web3.eth.getBlock(block_hash, full_transactions=True)
         block_number = block['number']
-        print("New Block: {0} Height: {1}".format(block_hash, block_number))
+        logging.info("New Block: {0} Height: {1}".format(block_hash, block_number))
 
         for tx in self.unconfirmed_txs:
             msg = tx.tip_timestamp.msg
             msg_hex = bytes.hex(msg)
             stamp = make_timestamp_from_block(msg_hex, block, block_number)
             if stamp is not None:
-                print("digest FOUND!!! " + msg_hex)
-                print(stamp.str_tree())
-                self.txs_waiting_for_confirmation[block_number] = tx
-                # Since all unconfirmed txs conflict with each other, we can clear the entire lot
-                self.unconfirmed_txs.clear()
-
-                # And finally, we can reset the last time a timestamp
-                # transaction was mined to right now.
-                self.last_timestamp_tx = time.time()
+                logging.info("digest FOUND!!! " + msg_hex)
+                logging.info(stamp.str_tree())
+                self.txs_waiting_for_enough_confirmation[block_number] = tx
+                self.merkle_tree_for_tx[tx.tip_timestamp.msg] = stamp
 
         to_pop = []
-        for height, tx in self.txs_waiting_for_confirmation.items():
+        for height, tx in self.txs_waiting_for_enough_confirmation.items():
             msg_hex = bytes.hex(tx.tip_timestamp.msg)
             elapsed = block_number - height
             if elapsed >= WAIT_CONFIRMATIONS:
-                print("CONFIRMED " + msg_hex)  # check reorg
+                logging.info("CONFIRMED " + msg_hex)  # check reorg
+                self.unconfirmed_txs.clear()
                 to_pop.append(height)
                 self.calendar.add_commitment_timestamp(tx.tip_timestamp)
+                self.calendar.add_commitment_timestamp(self.merkle_tree_for_tx.pop(tx.tip_timestamp.msg, None))
+                for ts in tx.commitment_timestamps:
+                    self.calendar.add_commitment_timestamp(ts)
             else:
-                print("not yet confirmed " + msg_hex + " elapsed " + str(elapsed))
+                logging.info("not yet confirmed " + msg_hex + " elapsed " + str(elapsed))
         for p in to_pop:
-            self.txs_waiting_for_confirmation.pop(p, None)
+            self.txs_waiting_for_enough_confirmation.pop(p, None)
 
     def __loop(self):
         logging.info("Starting stamper loop")
@@ -136,7 +130,8 @@ class EthStamper:
         self.exit_event = exit_event
         self.pending_commitments = set()
         self.unconfirmed_txs = []
-        self.txs_waiting_for_confirmation = {}
+        self.txs_waiting_for_enough_confirmation = {}
+        self.merkle_tree_for_tx = {}
         self.last_timestamp_tx = 0
         self.web3 = Web3(KeepAliveRPCProvider(host="localhost", port=8545))
         self.account = self.web3.eth.accounts[0]

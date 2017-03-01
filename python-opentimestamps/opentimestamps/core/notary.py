@@ -75,6 +75,8 @@ class TimeAttestation:
             r = PendingAttestation.deserialize(payload_ctx)
         elif tag == BitcoinBlockHeaderAttestation.TAG:
             r = BitcoinBlockHeaderAttestation.deserialize(payload_ctx)
+        elif tag == EthereumBlockHeaderAttestation.TAG:
+            r = EthereumBlockHeaderAttestation.deserialize(payload_ctx)
         else:
             return UnknownAttestation(tag, serialized_attestation)
 
@@ -290,13 +292,14 @@ class BitcoinBlockHeaderAttestation(TimeAttestation):
         return BitcoinBlockHeaderAttestation(height)
 
 
+
 class EthereumBlockHeaderAttestation(TimeAttestation):
     """Signed by the Ethereum blockchain
 
     The commitment digest will be the merkleroot of the blockheader.
     """
 
-    TAG = bytes.fromhex('0618465d13da19f1')
+    TAG = bytes.fromhex('30fe8087b5c7ead7')
 
     def __init__(self, height):
         self.height = height
@@ -317,7 +320,7 @@ class EthereumBlockHeaderAttestation(TimeAttestation):
     def __hash__(self):
         return hash(self.height)
 
-    def verify_against_blockheader(self, digest, block_header):
+    def verify_against_blockheader(self, digest, block):
         """Verify attestation against a block header
 
         Returns the block time on success; raises VerificationError on failure.
@@ -325,10 +328,10 @@ class EthereumBlockHeaderAttestation(TimeAttestation):
 
         if len(digest) != 32:
             raise VerificationError("Expected digest with length 32 bytes; got %d bytes" % len(digest))
-        elif digest != block_header.hashMerkleRoot:
+        elif digest != bytes.fromhex(block['transactionsRoot'][2:]):
             raise VerificationError("Digest does not match merkleroot")
 
-        return block_header.nTime
+        return block['timestamp']
 
     def __repr__(self):
         return 'EthereumBlockHeaderAttestation(%r)' % self.height
