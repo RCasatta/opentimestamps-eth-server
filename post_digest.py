@@ -8,7 +8,7 @@ def call(rcal, val):
     rcal.submit(val)
 
 
-cal = RemoteCalendar("http://localhost:14789")
+cal = RemoteCalendar("https://eth.ots.eternitywall.com")
 urandom = os.urandom(32)
 print(bytes.hex(urandom))
 urandom2 = os.urandom(32)
