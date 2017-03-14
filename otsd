@@ -47,6 +47,14 @@ parser.add_argument("--rpc-address", type=str,
                     default='localhost',
                     help="RPC address (default: %(default)s)")
 
+
+parser.add_argument("--web3-rpc-port", type=int,
+                    default=8545,
+                    help="Ethereum Web3 RPC port (default: %(default)d)")
+parser.add_argument("--web3-rpc-address", type=str,
+                    default='localhost',
+                    help="Ethereum Web3 RPC address (default: %(default)s)")
+
 args = parser.parse_args()
 args.parser = parser
 
@@ -82,16 +90,16 @@ ch.addFilter(Blacklist('requests.packages.urllib3.connectionpool'))
 
 exit_event = threading.Event()
 
-calendar_path = os.path.expanduser(args.calendar_path)
+web3_address = (args.web3_rpc_address, args.web3_rpc_port)
 
+calendar_path = os.path.expanduser(args.calendar_path)
 calendar = otsserver.calendar.Calendar(calendar_path)
 aggregator = otsserver.calendar.Aggregator(calendar, exit_event)
-
-stamper = otsserver.eth_stamper.EthStamper(calendar, exit_event)
-
+stamper = otsserver.eth_stamper.EthStamper(calendar, exit_event, web3_address)
 calendar.stamper = stamper
 
-server = otsserver.eth_rpc.StampServer((args.rpc_address, args.rpc_port), aggregator, calendar)
+
+server = otsserver.eth_rpc.StampServer((args.rpc_address, args.rpc_port), web3_address, aggregator, calendar)
 try:
     server.serve_forever()
 except KeyboardInterrupt:

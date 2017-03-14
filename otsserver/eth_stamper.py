@@ -125,7 +125,7 @@ class EthStamper:
     def is_pending(self, commitment):
         return
 
-    def __init__(self, calendar, exit_event):
+    def __init__(self, calendar, exit_event, web3_address):
         self.calendar = calendar
         self.exit_event = exit_event
         self.pending_commitments = set()
@@ -133,7 +133,7 @@ class EthStamper:
         self.txs_waiting_for_enough_confirmation = {}
         self.merkle_tree_for_tx = {}
         self.last_timestamp_tx = 0
-        self.web3 = Web3(KeepAliveRPCProvider(host="localhost", port=8545))
+        self.web3 = Web3(KeepAliveRPCProvider(host=web3_address[0], port=web3_address[1]))
         self.account = self.web3.eth.accounts[0]
         new_block_filter = self.web3.eth.filter('latest')
         new_block_filter.watch(self.new_block_callback)

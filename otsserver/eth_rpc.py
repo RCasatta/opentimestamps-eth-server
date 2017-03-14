@@ -121,7 +121,7 @@ class RPCRequestHandler(http.server.BaseHTTPRequestHandler):
 
             self.end_headers()
 
-            web3 = Web3(KeepAliveRPCProvider(host="localhost", port=8545))
+            web3 = Web3(KeepAliveRPCProvider(host=self.web3_address[0], port=self.web3_address[1]))
 
             # FIXME: Unfortunately getbalance() doesn't return the right thing;
             # need to investigate further, but this seems to work.
@@ -172,11 +172,12 @@ You can donate to the wallet by sending funds to %s</br>
 
 
 class StampServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
-    def __init__(self, server_address, aggregator, calendar):
+    def __init__(self, server_address, web3_address, aggregator, calendar):
         class rpc_request_handler(RPCRequestHandler):
             pass
         rpc_request_handler.aggregator = aggregator
         rpc_request_handler.calendar = calendar
+        rpc_request_handler.web3_address = web3_address
 
         super().__init__(server_address, rpc_request_handler)
 
