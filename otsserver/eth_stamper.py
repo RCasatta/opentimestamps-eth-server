@@ -23,14 +23,12 @@ from otsserver.calendar import Journal
 from otsserver.ethereum import make_timestamp_from_block
 
 TimestampTx = collections.namedtuple('TimestampTx', ['tx', 'tip_timestamp', 'commitment_timestamps'])
-WAIT_CONFIRMATIONS = 6
-WAIT_EVERY = 60 * 60  # Max 1tx per hour
 
 class EthStamper:
     """Timestamping bot"""
 
     def __do_ethereum(self):
-        if self.pending_commitments and time.time() > self.last_timestamp_tx + WAIT_EVERY:
+        if self.pending_commitments and time.time() > self.last_timestamp_tx + self.wait_time_between_txs:
             logging.info("we have commitments and enough time has passed")
             # logging.info(self.pending_commitments)
             # Update the most recent timestamp transaction with new commitments
@@ -73,7 +71,7 @@ class EthStamper:
         for height, tx in self.txs_waiting_for_enough_confirmation.items():
             msg_hex = bytes.hex(tx.tip_timestamp.msg)
             elapsed = block_number - height
-            if elapsed >= WAIT_CONFIRMATIONS:
+            if elapsed >= self.wait_confirmations:
                 logging.info("CONFIRMED " + msg_hex)  # check reorg
                 self.unconfirmed_txs.clear()
                 to_pop.append(height)
@@ -125,7 +123,7 @@ class EthStamper:
     def is_pending(self, commitment):
         return
 
-    def __init__(self, calendar, exit_event, web3_address):
+    def __init__(self, calendar, exit_event, web3_address, args):
         self.calendar = calendar
         self.exit_event = exit_event
         self.pending_commitments = set()
@@ -134,6 +132,8 @@ class EthStamper:
         self.merkle_tree_for_tx = {}
         self.last_timestamp_tx = 0
         self.web3 = Web3(KeepAliveRPCProvider(host=web3_address[0], port=web3_address[1]))
+        self.wait_confirmations = args.wait_confirmations
+        self.wait_time_between_txs = args.wait_time_between_txs
         self.account = self.web3.eth.accounts[0]
         new_block_filter = self.web3.eth.filter('latest')
         new_block_filter.watch(self.new_block_callback)
