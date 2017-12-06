@@ -137,7 +137,7 @@ class RPCRequestHandler(http.server.BaseHTTPRequestHandler):
 </head>
 <body>
 <p>This is an <a href="http://www.opentimestamps.org">OpenTimestamps</a> Calendar.</p>
-
+<p>Experimental etherum support, use at your own risks</p>
 <p>
 Best-block height %d</br>
 </br>
